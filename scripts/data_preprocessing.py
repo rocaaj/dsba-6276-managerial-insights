@@ -8,9 +8,10 @@ Steps:
 1. Load raw CSV (semicolon-separated)
 2. Handle missing values and data types
 3. Interactive prompts for information leakage decisions
-4. Encode categorical variables (mixed: ordinal for ordered, one-hot for nominal)
-5. Scale numeric variables (StandardScaler)
-6. Save fully processed dataset to data/bank-full-processed.csv
+4. Map job types to income levels (low/medium/high) for interpretability
+5. Encode categorical variables (mixed: ordinal for ordered, one-hot for nominal)
+6. Scale numeric variables (StandardScaler)
+7. Save fully processed dataset to data/bank-full-processed.csv
 """
 
 import pandas as pd
@@ -32,7 +33,27 @@ POTENTIALLY_LEAKY = ["duration", "poutcome", "pdays", "previous"]
 
 # Categorical encoding strategy
 ORDINAL_CATEGORIES = {
-    "education": ["unknown", "primary", "secondary", "tertiary"]
+    "education": ["unknown", "primary", "secondary", "tertiary"],
+    "job_income": ["low", "medium", "high"]  # Income level grouping for jobs
+}
+
+# Job to income level mapping
+JOB_INCOME_MAPPING = {
+    # High income
+    "management": "high",
+    "entrepreneur": "high",
+    "self-employed": "high",
+    # Medium income
+    "technician": "medium",
+    "admin.": "medium",
+    "services": "medium",
+    "retired": "medium",
+    "unknown": "medium",  # Map unknown to medium
+    # Low income
+    "blue-collar": "low",
+    "housemaid": "low",
+    "student": "low",
+    "unemployed": "low"
 }
 
 # -------------------------
@@ -114,11 +135,46 @@ def handle_information_leakage(df: pd.DataFrame) -> pd.DataFrame:
     return df_cleaned
 
 
+def map_job_to_income(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Map job types to income levels (low/medium/high) for better interpretability.
+    
+    Returns:
+        DataFrame with 'job' column replaced by 'job_income' column
+    """
+    if "job" not in df.columns:
+        return df
+    
+    print("\n🔄 Mapping job types to income levels...")
+    
+    # Create mapping
+    df_mapped = df.copy()
+    df_mapped["job_income"] = df_mapped["job"].map(JOB_INCOME_MAPPING)
+    
+    # Check for any unmapped jobs
+    unmapped = df_mapped[df_mapped["job_income"].isna()]["job"].unique()
+    if len(unmapped) > 0:
+        print(f"⚠️  Warning: Found unmapped job types: {unmapped}")
+        print(f"   Mapping to 'medium' by default")
+        df_mapped["job_income"] = df_mapped["job_income"].fillna("medium")
+    
+    # Show mapping distribution
+    mapping_counts = df_mapped["job_income"].value_counts()
+    print(f"✅ Job income mapping distribution:")
+    for income_level, count in mapping_counts.items():
+        print(f"   {income_level}: {count} ({count/len(df_mapped)*100:.1f}%)")
+    
+    # Drop original job column and keep job_income
+    df_mapped = df_mapped.drop(columns=["job"])
+    
+    return df_mapped
+
+
 def encode_categoricals(df: pd.DataFrame) -> pd.DataFrame:
     """
     Encode categorical variables using mixed strategy:
-    - Ordinal encoding for ordered categories (education)
-    - One-hot encoding for nominal categories (job, marital, etc.)
+    - Ordinal encoding for ordered categories (education, job_income)
+    - One-hot encoding for nominal categories (marital, default, etc.)
     
     Returns:
         DataFrame with encoded categoricals
@@ -259,8 +315,11 @@ def main():
     # Handle information leakage (interactive)
     df_cleaned = handle_information_leakage(df)
     
+    # Map job to income levels
+    df_mapped = map_job_to_income(df_cleaned)
+    
     # Encode categoricals
-    df_encoded = encode_categoricals(df_cleaned)
+    df_encoded = encode_categoricals(df_mapped)
     
     # Scale numeric features
     df_processed = scale_numeric_features(df_encoded)
