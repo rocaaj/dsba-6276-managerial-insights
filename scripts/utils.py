@@ -235,7 +235,7 @@ def plot_feature_significance(coef_df, save_path=None):
     Plot p-value significance visualization.
     
     Args:
-        coef_df: DataFrame with columns ['Feature', 'p-value', 'Coefficient']
+        coef_df: DataFrame with columns ['Feature', 'p_value', 'Coefficient']
         save_path: Path to save plot (optional)
     """
     # Exclude intercept
@@ -243,12 +243,12 @@ def plot_feature_significance(coef_df, save_path=None):
     
     # Create significance categories
     plot_df['Significance'] = 'Not Significant'
-    plot_df.loc[plot_df['p-value'] < 0.001, 'Significance'] = 'p < 0.001'
-    plot_df.loc[(plot_df['p-value'] >= 0.001) & (plot_df['p-value'] < 0.01), 'Significance'] = 'p < 0.01'
-    plot_df.loc[(plot_df['p-value'] >= 0.01) & (plot_df['p-value'] < 0.05), 'Significance'] = 'p < 0.05'
+    plot_df.loc[plot_df['p_value'] < 0.001, 'Significance'] = 'p < 0.001'
+    plot_df.loc[(plot_df['p_value'] >= 0.001) & (plot_df['p_value'] < 0.01), 'Significance'] = 'p < 0.01'
+    plot_df.loc[(plot_df['p_value'] >= 0.01) & (plot_df['p_value'] < 0.05), 'Significance'] = 'p < 0.05'
     
     # Sort by p-value
-    plot_df = plot_df.sort_values('p-value')
+    plot_df = plot_df.sort_values('p_value')
     
     # Color mapping
     color_map = {
@@ -264,7 +264,7 @@ def plot_feature_significance(coef_df, save_path=None):
     for sig_level in ['p < 0.001', 'p < 0.01', 'p < 0.05', 'Not Significant']:
         subset = plot_df[plot_df['Significance'] == sig_level]
         if len(subset) > 0:
-            plt.scatter(subset['p-value'], range(len(subset)), 
+            plt.scatter(subset['p_value'], range(len(subset)), 
                        c=color_map[sig_level], label=sig_level, s=50, alpha=0.7)
     
     plt.yticks(range(len(plot_df)), plot_df['Feature'])
