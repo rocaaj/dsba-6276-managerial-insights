@@ -241,18 +241,24 @@ def plot_response_by_cluster(df, cluster_col, response_col, campaign_features=No
         axes = [axes]
     
     # Plot 1: Subscription rates by cluster
-    response_rates = df.groupby(cluster_col)[response_col].agg(['mean', 'count'])
-    response_rates['mean'] = response_rates['mean'] * 100  # Convert to percentage
+    # Convert response to numeric (yes=1, no=0) before computing mean
+    # Note: 1 = "yes" (subscribed), 0 = "no" (did not subscribe)
+    response_rates = pd.DataFrame({
+        'mean': df.groupby(cluster_col)[response_col].apply(lambda x: (x == 'yes').mean() * 100),
+        'count': df.groupby(cluster_col)[response_col].count()
+    })
     
     axes[0].bar(response_rates.index, response_rates['mean'], color='steelblue', alpha=0.7)
     axes[0].set_xlabel('Cluster', fontsize=12)
     axes[0].set_ylabel('Subscription Rate (%)', fontsize=12)
-    axes[0].set_title('Subscription Rate by Cluster', fontsize=12, fontweight='bold')
+    axes[0].set_title('Subscription Rate by Cluster\n(Percentage with y="yes" who subscribed)', fontsize=12, fontweight='bold')
     axes[0].grid(axis='y', alpha=0.3)
+    axes[0].set_ylim([0, max(response_rates['mean']) * 1.15])  # Add some space for labels
     
     # Add count labels
-    for i, (idx, row) in enumerate(response_rates.iterrows()):
-        axes[0].text(idx, row['mean'] + 1, f"n={int(row['count'])}", 
+    for idx, row in response_rates.iterrows():
+        axes[0].text(idx, row['mean'] + max(response_rates['mean']) * 0.02, 
+                    f"n={int(row['count'])}", 
                     ha='center', fontsize=9)
     
     # Plot campaign features if provided
